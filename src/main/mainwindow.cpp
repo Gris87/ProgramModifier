@@ -29,21 +29,31 @@ MainWindow::MainWindow(QWidget *parent) :
 
 
 
-    mGoodFormat.setBackground(QColor(128, 128, 255));
-    mBadFormat.setBackground( QColor(255, 128, 128));
+    mGoodFormat.setBackground(QColor(220, 220, 255));
+    mBadFormat.setBackground( QColor(255, 220, 220));
 
 
+
+    ui->filesTreeWidget->installEventFilter(this);
+    ui->codeTextEdit->installEventFilter(this);
+
+
+
+    loadState();
+
+
+
+    ui->filesTreeWidget->blockSignals(true);
 
     QTreeWidgetItem *aItem=new QTreeWidgetItem(QStringList() << "/");
     aItem->setIcon(0, mIconProvider.icon(QFileIconProvider::Folder));
     ui->filesTreeWidget->addTopLevelItem(aItem);
 
-    ui->filesTreeWidget->installEventFilter(this);
-    ui->codeTextEdit->installEventFilter(this);
-
-    loadState();
-
     updateProjectFolder();
+
+    ui->filesTreeWidget->blockSignals(false);
+
+    openFile();
 }
 
 MainWindow::~MainWindow()
@@ -80,7 +90,7 @@ void MainWindow::deleteFile()
 
         if (QMessageBox::question(this, tr("Delete file"), tr("Do you want to delete file:\n%1").arg(aFileName), QMessageBox::Yes | QMessageBox::Default, QMessageBox::No | QMessageBox::Escape)==QMessageBox::Yes)
         {
-            deleteFile(aFileName);
+            deleteFile(QDir::fromNativeSeparators(aFileName));
 
             if (aItem!=ui->filesTreeWidget->topLevelItem(0))
             {
@@ -98,8 +108,8 @@ void MainWindow::deleteFile(QString aFileName)
     {
         if (aFileInfo.isDir())
         {
-            QDir aDir=aFileInfo.dir();
-            QFileInfoList aFiles=aDir.entryInfoList();
+            QDir aDir(aFileName);
+            QFileInfoList aFiles=aDir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot);
 
             for (int i=0; i<aFiles.length(); ++i)
             {
@@ -107,7 +117,7 @@ void MainWindow::deleteFile(QString aFileName)
             }
 
             aDir.cdUp();
-            aDir.remove(aFileName.mid(aFileName.lastIndexOf("/")+1));
+            aDir.rmdir(aFileName.mid(aFileName.lastIndexOf("/")+1));
         }
         else
         {
@@ -118,7 +128,61 @@ void MainWindow::deleteFile(QString aFileName)
 
 void MainWindow::toggleRows()
 {
+    QTextCursor aCursor(ui->codeTextEdit->textCursor());
 
+    int aStart=aCursor.selectionStart();
+    int aStop=aCursor.selectionEnd();
+
+    aCursor.setPosition(aStart);
+    aCursor.movePosition(QTextCursor::StartOfBlock);
+    aStart=aCursor.selectionStart();
+
+    bool aGoodText=true;
+
+    while (aCursor.position()<=aStop)
+    {
+        if (aCursor.block().blockFormat().background().color()==mBadFormat.background().color())
+        {
+            aGoodText=false;
+            break;
+        }
+
+        if (!aCursor.movePosition(QTextCursor::NextBlock))
+        {
+            break;
+        }
+    }
+
+    aGoodText=!aGoodText;
+
+    aCursor.setPosition(aStart);
+    aCursor.movePosition(QTextCursor::StartOfBlock);
+
+    while (aCursor.position()<=aStop)
+    {
+        if (aGoodText)
+        {
+            aCursor.deleteChar();
+            aCursor.insertText("+");
+            aCursor.setBlockFormat(mGoodFormat);
+        }
+        else
+        {
+            aCursor.deleteChar();
+            aCursor.insertText(" ");
+            aCursor.setBlockFormat(mBadFormat);
+        }
+
+        if (!aCursor.movePosition(QTextCursor::NextBlock))
+        {
+            break;
+        }
+    }
+
+    QFile aFile(mCurrentFile);
+    aFile.open(QIODevice::WriteOnly);
+    aFile.write(ui->codeTextEdit->toPlainText().toUtf8());
+    aFile.close();
 }
 
 void MainWindow::insertTreeNodes(QTreeWidgetItem *aParentItem, QString aFolder)
@@ -133,7 +197,7 @@ void MainWindow::insertTreeNodes(QTreeWidgetItem *aParentItem, QString aFolder)
         aFolder.append("/");
     }
 
-    QFileInfoList aFiles=QDir(aFolder).entryInfoList(QDir::NoFilter, QDir::Name | QDir::DirsFirst | QDir::IgnoreCase);
+    QFileInfoList aFiles=QDir(aFolder).entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot, QDir::Name | QDir::DirsFirst | QDir::IgnoreCase);
 
     for (int i=0; i<aFiles.length(); i++)
     {
@@ -141,11 +205,6 @@ void MainWindow::insertTreeNodes(QTreeWidgetItem *aParentItem, QString aFolder)
 
         if (aFiles.at(i).isDir())
         {
-            if (aFileName=="." || aFileName==".." || aFileName==".git")
-            {
-                continue;
-            }
-
             QTreeWidgetItem *aItem=new QTreeWidgetItem(QStringList() << aFileName);
             aItem->setIcon(0, mIconProvider.icon(QFileIconProvider::Folder));
             aParentItem->addChild(aItem);
@@ -211,25 +270,30 @@ void MainWindow::openFile()
     {
         aFile.open(QIODevice::ReadOnly);
 
-        QTextCursor cursor(ui->codeTextEdit->textCursor());
-        cursor.movePosition(QTextCursor::Start);
+        QTextCursor aCursor(ui->codeTextEdit->textCursor());
+        aCursor.movePosition(QTextCursor::Start);
 
         while (!aFile.atEnd())
         {
-            QString aLine=QString::fromUtf8(aFile.readLine()).trimmed();
+            QString aLine=QString::fromUtf8(aFile.readLine());
+
+            while (aLine.length()>0 && aLine.at(aLine.length()-1).isSpace())
+            {
+                aLine.remove(aLine.length()-1, 1);
+            }
 
             if (aLine.startsWith("+"))
             {
-                cursor.setBlockFormat(mGoodFormat);
+                aCursor.setBlockFormat(mGoodFormat);
             }
             else
             {
-                cursor.setBlockFormat(mBadFormat);
+                aCursor.setBlockFormat(mBadFormat);
+                aCursor.insertText(" ");
             }
 
-
-            cursor.insertText(aLine);
-            cursor.insertBlock();
+            aCursor.insertText(aLine);
+            aCursor.insertBlock();
         }
 
         aFile.close();
@@ -254,8 +318,16 @@ void MainWindow::on_actionExit_triggered()
     QApplication::closeAllWindows();
 }
 
+bool firstRun=true;
+
 void MainWindow::on_filesTreeWidget_currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem * /*previous*/)
 {
+    if (firstRun)
+    {
+        firstRun=false;
+        return;
+    }
+
     mCurrentFile=itemPath(current);
     openFile();
 }
@@ -273,6 +345,7 @@ void MainWindow::saveState()
     aSettings.beginGroup("States");
 
     aSettings.setValue("ProjectFolder", mProjectFolder);
+    aSettings.setValue("CurrentFile", mCurrentFile);
     aSettings.setValue("Geometry", saveGeometry());
     aSettings.setValue("DividerState", mDividerSplitter->saveState());
 
@@ -288,6 +361,7 @@ void MainWindow::loadState()
     aSettings.beginGroup("States");
 
     mProjectFolder=aSettings.value("ProjectFolder", "").toString();
+    mCurrentFile=aSettings.value("CurrentFile", "").toString();
     restoreGeometry(aSettings.value("Geometry").toByteArray());
     mDividerSplitter->restoreState(aSettings.value("DividerState").toByteArray());
 
