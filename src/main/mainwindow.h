@@ -29,12 +29,19 @@ private:
     QString            mProjectFolder;
     QString            mCurrentFile;
 
+    void deleteFile();
+    void deleteFile(QString aFileName);
+    void toggleRows();
     void insertTreeNodes(QTreeWidgetItem *aParentItem, QString aFolder);
     void updateProjectFolder();
+    QString itemPath(QTreeWidgetItem *aItem);
     void openFile();
 
     inline void saveState();
     inline void loadState();
+
+protected:
+    bool eventFilter(QObject *aObject, QEvent *aEvent);
 
 private slots:
     void on_actionOpen_folder_triggered();

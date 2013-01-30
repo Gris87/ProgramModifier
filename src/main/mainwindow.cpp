@@ -1,8 +1,10 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
+#include <QMessageBox>
 #include <QSettings>
 #include <QTextFrame>
+#include <QKeyEvent>
 
 #include "treedirectorydialog.h"
 
@@ -36,6 +38,9 @@ MainWindow::MainWindow(QWidget *parent) :
     aItem->setIcon(0, mIconProvider.icon(QFileIconProvider::Folder));
     ui->filesTreeWidget->addTopLevelItem(aItem);
 
+    ui->filesTreeWidget->installEventFilter(this);
+    ui->codeTextEdit->installEventFilter(this);
+
     loadState();
 
     updateProjectFolder();
@@ -46,6 +51,74 @@ MainWindow::~MainWindow()
     saveState();
 
     delete ui;
+}
+
+bool MainWindow::eventFilter(QObject *aObject, QEvent *aEvent)
+{
+    if (aEvent->type()==QEvent::KeyPress && aObject==ui->filesTreeWidget && ((QKeyEvent *)aEvent)->key()==Qt::Key_Delete)
+    {
+        deleteFile();
+        return true;
+    }
+    else
+    if (aEvent->type()==QEvent::KeyPress && aObject==ui->codeTextEdit && ((QKeyEvent *)aEvent)->key()==Qt::Key_Space)
+    {
+        toggleRows();
+        return true;
+    }
+
+    return false;
+}
+
+void MainWindow::deleteFile()
+{
+    QTreeWidgetItem *aItem=ui->filesTreeWidget->currentItem();
+
+    if (aItem)
+    {
+        QString aFileName=itemPath(aItem);
+
+        if (QMessageBox::question(this, tr("Delete file"), tr("Do you want to delete file:\n%1").arg(aFileName), QMessageBox::Yes | QMessageBox::Default, QMessageBox::No | QMessageBox::Escape)==QMessageBox::Yes)
+        {
+            deleteFile(aFileName);
+
+            if (aItem!=ui->filesTreeWidget->topLevelItem(0))
+            {
+                delete aItem;
+            }
+        }
+    }
+}
+
+void MainWindow::deleteFile(QString aFileName)
+{
+    QFileInfo aFileInfo(aFileName);
+
+    if (aFileInfo.exists())
+    {
+        if (aFileInfo.isDir())
+        {
+            QDir aDir=aFileInfo.dir();
+            QFileInfoList aFiles=aDir.entryInfoList();
+
+            for (int i=0; i<aFiles.length(); ++i)
+            {
+                deleteFile(aFiles.at(i).absoluteFilePath());
+            }
+
+            aDir.cdUp();
+            aDir.remove(aFileName.mid(aFileName.lastIndexOf("/")+1));
+        }
+        else
+        {
+            QFile::remove(aFileName);
+        }
+    }
+}
+
+void MainWindow::toggleRows()
+{
+
 }
 
 void MainWindow::insertTreeNodes(QTreeWidgetItem *aParentItem, QString aFolder)
@@ -104,6 +177,29 @@ void MainWindow::updateProjectFolder()
     }
 }
 
+QString MainWindow::itemPath(QTreeWidgetItem *aItem)
+{
+    QString aFileName=QDir::fromNativeSeparators(aItem->text(0));
+
+    while (aItem->parent())
+    {
+        aItem=aItem->parent();
+        aFileName.insert(0, "/");
+        aFileName.insert(0, aItem->text(0));
+    }
+
+    aFileName=QDir::fromNativeSeparators(mProjectFolder)+aFileName;
+
+    while (aFileName.contains("//"))
+    {
+        aFileName.replace("//", "/");
+    }
+
+    aFileName=QDir::toNativeSeparators(aFileName);
+
+    return aFileName;
+}
+
 void MainWindow::openFile()
 {
     ui->codeTextEdit->setUpdatesEnabled(false);
@@ -160,22 +256,7 @@ void MainWindow::on_actionExit_triggered()
 
 void MainWindow::on_filesTreeWidget_currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem * /*previous*/)
 {
-    QString aFileName=QDir::fromNativeSeparators(current->text(0));
-
-    while (current->parent())
-    {
-        current=current->parent();
-        aFileName.insert(0, "/");
-        aFileName.insert(0, current->text(0));
-    }
-
-    mCurrentFile=QDir::toNativeSeparators(mProjectFolder+aFileName);
-
-    while (mCurrentFile.contains("//"))
-    {
-        mCurrentFile.replace("//", "/");
-    }
-
+    mCurrentFile=itemPath(current);
     openFile();
 }
 
