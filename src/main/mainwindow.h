@@ -6,6 +6,7 @@
 #include <QSplitter>
 #include <QFileIconProvider>
 #include <QTreeWidgetItem>
+#include <QTextBlockFormat>
 
 namespace Ui {
 class MainWindow;
@@ -22,7 +23,9 @@ public:
 private:
     Ui::MainWindow    *ui;
     QSplitter         *mDividerSplitter;
-    QFileIconProvider *mIconProvider;
+    QFileIconProvider  mIconProvider;
+    QTextBlockFormat   mGoodFormat;
+    QTextBlockFormat   mBadFormat;
     QString            mProjectFolder;
     QString            mCurrentFile;
 

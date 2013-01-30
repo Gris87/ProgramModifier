@@ -2,6 +2,7 @@
 #include "ui_mainwindow.h"
 
 #include <QSettings>
+#include <QTextFrame>
 
 #include "treedirectorydialog.h"
 
@@ -26,11 +27,13 @@ MainWindow::MainWindow(QWidget *parent) :
 
 
 
-    mIconProvider=new QFileIconProvider();
+    mGoodFormat.setBackground(QColor(128, 128, 255));
+    mBadFormat.setBackground( QColor(255, 128, 128));
+
 
 
     QTreeWidgetItem *aItem=new QTreeWidgetItem(QStringList() << "/");
-    aItem->setIcon(0, mIconProvider->icon(QFileIconProvider::Folder));
+    aItem->setIcon(0, mIconProvider.icon(QFileIconProvider::Folder));
     ui->filesTreeWidget->addTopLevelItem(aItem);
 
     loadState();
@@ -65,13 +68,13 @@ void MainWindow::insertTreeNodes(QTreeWidgetItem *aParentItem, QString aFolder)
 
         if (aFiles.at(i).isDir())
         {
-            if (aFileName=="." || aFileName=="..")
+            if (aFileName=="." || aFileName==".." || aFileName==".git")
             {
                 continue;
             }
 
             QTreeWidgetItem *aItem=new QTreeWidgetItem(QStringList() << aFileName);
-            aItem->setIcon(0, mIconProvider->icon(QFileIconProvider::Folder));
+            aItem->setIcon(0, mIconProvider.icon(QFileIconProvider::Folder));
             aParentItem->addChild(aItem);
 
             insertTreeNodes(aItem, aFolder+aFileName);
@@ -79,7 +82,7 @@ void MainWindow::insertTreeNodes(QTreeWidgetItem *aParentItem, QString aFolder)
         else
         {
             QTreeWidgetItem *aItem=new QTreeWidgetItem(QStringList() << aFileName);
-            aItem->setIcon(0, mIconProvider->icon(QFileIconProvider::File));
+            aItem->setIcon(0, mIconProvider.icon(QFileIconProvider::File));
             aParentItem->addChild(aItem);
         }
     }
@@ -87,14 +90,56 @@ void MainWindow::insertTreeNodes(QTreeWidgetItem *aParentItem, QString aFolder)
 
 void MainWindow::updateProjectFolder()
 {
-    insertTreeNodes(ui->filesTreeWidget->topLevelItem(0), QDir::fromNativeSeparators(mProjectFolder));
+    if (mProjectFolder!="")
+    {
+        setWindowTitle("ProgramModifier ["+mProjectFolder+"]");
 
-    setWindowTitle("ProgramModifier ["+mProjectFolder+"]");
+        ui->filesTreeWidget->setUpdatesEnabled(false);
+
+        QTreeWidgetItem *aItem=ui->filesTreeWidget->topLevelItem(0);
+        insertTreeNodes(aItem, QDir::fromNativeSeparators(mProjectFolder));
+        aItem->setExpanded(true);
+
+        ui->filesTreeWidget->setUpdatesEnabled(true);
+    }
 }
 
 void MainWindow::openFile()
 {
+    ui->codeTextEdit->setUpdatesEnabled(false);
+    ui->codeTextEdit->clear();
 
+    QFile aFile(mCurrentFile);
+
+    if (aFile.exists())
+    {
+        aFile.open(QIODevice::ReadOnly);
+
+        QTextCursor cursor(ui->codeTextEdit->textCursor());
+        cursor.movePosition(QTextCursor::Start);
+
+        while (!aFile.atEnd())
+        {
+            QString aLine=QString::fromUtf8(aFile.readLine()).trimmed();
+
+            if (aLine.startsWith("+"))
+            {
+                cursor.setBlockFormat(mGoodFormat);
+            }
+            else
+            {
+                cursor.setBlockFormat(mBadFormat);
+            }
+
+
+            cursor.insertText(aLine);
+            cursor.insertBlock();
+        }
+
+        aFile.close();
+    }
+
+    ui->codeTextEdit->setUpdatesEnabled(true);
 }
 
 void MainWindow::on_actionOpen_folder_triggered()
@@ -161,7 +206,7 @@ void MainWindow::loadState()
 
     aSettings.beginGroup("States");
 
-    mProjectFolder=aSettings.value("ProjectFolder", "C:\\").toString();
+    mProjectFolder=aSettings.value("ProjectFolder", "").toString();
     restoreGeometry(aSettings.value("Geometry").toByteArray());
     mDividerSplitter->restoreState(aSettings.value("DividerState").toByteArray());
 
