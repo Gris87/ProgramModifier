@@ -238,6 +238,11 @@ void MainWindow::updateProjectFolder()
 
 QString MainWindow::itemPath(QTreeWidgetItem *aItem)
 {
+    if (aItem==0)
+    {
+        return "";
+    }
+
     QString aFileName=QDir::fromNativeSeparators(aItem->text(0));
 
     while (aItem->parent())
