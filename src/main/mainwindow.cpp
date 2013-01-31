@@ -181,7 +181,30 @@ void MainWindow::toggleRows()
 
     QFile aFile(mCurrentFile);
     aFile.open(QIODevice::WriteOnly);
-    aFile.write(ui->codeTextEdit->toPlainText().toUtf8());
+
+    QStringList aLines=ui->codeTextEdit->toPlainText().split("\n");
+
+    for (int i=0; i<aLines.length(); ++i)
+    {
+        if (i>0)
+        {
+#ifdef Q_OS_WIN
+            aFile.write(QString("\r\n").toUtf8());
+#else
+            aFile.write(QString("\n").toUtf8());
+#endif
+        }
+
+        QString aLine=aLines.at(i);
+
+        if (aLine.startsWith(" "))
+        {
+            aLine.remove(0, 1);
+        }
+
+        aFile.write(aLine.toUtf8());
+    }
+
     aFile.close();
 }
 
