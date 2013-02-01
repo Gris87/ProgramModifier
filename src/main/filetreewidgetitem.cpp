@@ -77,7 +77,7 @@ FileTreeWidgetItem::~FileTreeWidgetItem()
 
 void FileTreeWidgetItem::createThread()
 {
-    mMyThread=new ItemThread(filePath());
+    mMyThread=new ItemThread(filePath(), this);
     threads.append(mMyThread);
 
     if (threads.length()<THREADS_COUNT)

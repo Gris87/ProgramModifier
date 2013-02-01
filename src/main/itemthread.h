@@ -3,19 +3,22 @@
 
 #include <QThread>
 
+class FileTreeWidgetItem;
+
 class ItemThread : public QThread
 {
     Q_OBJECT
 public:
-    explicit ItemThread(const QString &aFileName, QObject *parent = 0);
+    explicit ItemThread(const QString &aFileName, FileTreeWidgetItem *aItem, QObject *parent = 0);
 
     void run();
 
     bool isOk();
 
 private:
-    bool    mOk;
-    QString mFileName;
+    QString             mFileName;
+    FileTreeWidgetItem *mItem;
+    bool                mOk;
 
 private slots:
     void threadFinished();
