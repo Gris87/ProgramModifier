@@ -1,4 +1,6 @@
 <RCC>
     <qresource prefix="/">
+        <file>images/Bad.png</file>
+        <file>images/Good.png</file>
     </qresource>
 </RCC>

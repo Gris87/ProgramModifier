@@ -10,7 +10,7 @@ class FileTreeWidgetItem : public QTreeWidgetItem
 public:
     enum State
     {
-        NORMAL,
+        NOT_VERIFIED,
         VERIFIED_GOOD,
         VERIFIED_BAD
     };
@@ -40,6 +40,7 @@ private:
     State       mState;
     QString     mProjectFolder;
     ItemThread *mMyThread;
+    QIcon       mIcon;
 
     void init();
 };

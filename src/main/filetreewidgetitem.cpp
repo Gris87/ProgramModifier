@@ -1,6 +1,7 @@
 #include "filetreewidgetitem.h"
 
 #include <QDir>
+#include <QPainter>
 
 #define THREADS_COUNT 4
 QList<ItemThread *> threads;
@@ -55,7 +56,7 @@ FileTreeWidgetItem::FileTreeWidgetItem(FileTreeWidgetItem *parent, FileTreeWidge
 
 void FileTreeWidgetItem::init()
 {
-    mState=NORMAL;
+    mState=NOT_VERIFIED;
     mProjectFolder="";
     mMyThread=0;
 }
@@ -135,7 +136,54 @@ QString FileTreeWidgetItem::filePath()
 
 void FileTreeWidgetItem::setState(const State &aState)
 {
+    if (mState==aState)
+    {
+        return;
+    }
+
+    Q_ASSERT(aState!=NOT_VERIFIED);
+
+    if (mState==VERIFIED_BAD)
+    {
+        return;
+    }
+
+    if (mState==NOT_VERIFIED)
+    {
+        mIcon=icon(0);
+    }
+
     mState=aState;
+
+    // -------------------------------------------------------------
+
+    QPixmap aPixmap=mIcon.pixmap(32, 32);
+    QPixmap aSmallImage;
+
+    if (mState==VERIFIED_GOOD)
+    {
+        aSmallImage.load(":/images/Good.png");
+    }
+    else
+    {
+        aSmallImage.load(":/images/Bad.png");
+    }
+
+    QPainter aPainter;
+    aPainter.begin(&aPixmap);
+    aPainter.drawPixmap(0, 16, 16, 16, aSmallImage);
+    aPainter.end();
+
+    setIcon(0, QIcon(aPixmap));
+
+    // -------------------------------------------------------------
+
+    FileTreeWidgetItem *aParent=(FileTreeWidgetItem *)parent();
+
+    if (aParent)
+    {
+        aParent->setState(mState);
+    }
 }
 
 void FileTreeWidgetItem::setProjectFolder(const QString &aProjectFolder)
