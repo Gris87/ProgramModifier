@@ -41,6 +41,10 @@ public:
 
     QString filePath();
 
+
+
+    void setState(const State &aState);
+
     void setProjectFolder(const QString &aProjectFolder);
 
 private:
@@ -51,6 +55,9 @@ private:
     static QList<ItemThread *> threads;
 
     void init();
+
+private slots:
+    void threadFinished();
 };
 
 #endif // FILETREEWIDGETITEM_H

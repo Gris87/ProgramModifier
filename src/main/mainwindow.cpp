@@ -235,6 +235,11 @@ void MainWindow::insertTreeNodes(FileTreeWidgetItem *aParentItem, QString aFolde
             aParentItem->addChild(aItem);
 
             insertTreeNodes(aItem, aFolder+aFileName);
+
+            if (aItem->childCount()==0)
+            {
+                aItem->setState(FileTreeWidgetItem::VERIFIED_GOOD);
+            }
         }
         else
         {

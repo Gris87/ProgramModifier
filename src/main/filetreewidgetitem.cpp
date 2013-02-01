@@ -83,12 +83,36 @@ FileTreeWidgetItem::~FileTreeWidgetItem()
 void FileTreeWidgetItem::createThread()
 {
     mMyThread=new ItemThread(filePath());
+    threads.append(mMyThread);
+
+    connect(mMyThread, SIGNAL(finished()), this, SLOT(threadFinished()));
 
     if (threads.length()<THREADS_COUNT)
     {
-        threads.append(mMyThread);
         mMyThread->start(QThread::IdlePriority);
     }
+}
+
+void FileTreeWidgetItem::threadFinished()
+{
+    threads.removeOne(mMyThread);
+
+    if (threads.length()>=THREADS_COUNT)
+    {
+        threads.at(THREADS_COUNT)->start(QThread::IdlePriority);
+    }
+
+    if (mMyThread->mOk)
+    {
+        setState(VERIFIED_GOOD);
+    }
+    else
+    {
+        setState(VERIFIED_BAD);
+    }
+
+    mMyThread->deleteLater();
+    mMyThread=0;
 }
 
 QString FileTreeWidgetItem::filePath()
@@ -114,6 +138,11 @@ QString FileTreeWidgetItem::filePath()
     aFileName=QDir::toNativeSeparators(aFileName);
 
     return aFileName;
+}
+
+void FileTreeWidgetItem::setState(const State &aState)
+{
+    mState=aState;
 }
 
 void FileTreeWidgetItem::setProjectFolder(const QString &aProjectFolder)
