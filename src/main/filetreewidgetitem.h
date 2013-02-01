@@ -2,19 +2,8 @@
 #define FILETREEWIDGETITEM_H
 
 #include <QTreeWidgetItem>
-#include <QThread>
 
-class ItemThread : public QThread
-{
-    Q_OBJECT
-
-public:
-    bool    mOk;
-    QString mFileName;
-
-    explicit ItemThread(const QString &aFileName, QObject *parent = 0);
-    void run();
-};
+#include "itemthread.h"
 
 class FileTreeWidgetItem : public QTreeWidgetItem
 {
@@ -34,10 +23,10 @@ public:
     explicit FileTreeWidgetItem(FileTreeWidgetItem *parent, int type = Type);
     FileTreeWidgetItem(FileTreeWidgetItem *parent, const QStringList &strings, int type = Type);
     FileTreeWidgetItem(FileTreeWidgetItem *parent, FileTreeWidgetItem *after, int type = Type);
-    FileTreeWidgetItem(const FileTreeWidgetItem &other);
     ~FileTreeWidgetItem();
 
     void createThread();
+    void threadFinished();
 
     QString filePath();
 
@@ -52,12 +41,7 @@ private:
     QString     mProjectFolder;
     ItemThread *mMyThread;
 
-    static QList<ItemThread *> threads;
-
     void init();
-
-private slots:
-    void threadFinished();
 };
 
 #endif // FILETREEWIDGETITEM_H

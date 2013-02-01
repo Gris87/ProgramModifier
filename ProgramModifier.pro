@@ -32,11 +32,13 @@ SOURCES +=  \
             src/main.cpp \
             src/main/mainwindow.cpp \
             src/main/treedirectorydialog.cpp \
-            src/main/filetreewidgetitem.cpp
+            src/main/filetreewidgetitem.cpp \
+            src/main/itemthread.cpp
 
 HEADERS  += src/main/mainwindow.h \
             src/main/treedirectorydialog.h \
-            src/main/filetreewidgetitem.h
+            src/main/filetreewidgetitem.h \
+            src/main/itemthread.h
 
 FORMS    += src/main/mainwindow.ui \
             src/main/treedirectorydialog.ui

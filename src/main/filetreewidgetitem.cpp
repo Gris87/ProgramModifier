@@ -3,6 +3,7 @@
 #include <QDir>
 
 #define THREADS_COUNT 4
+QList<ItemThread *> threads;
 
 FileTreeWidgetItem::FileTreeWidgetItem(int type) :
     QTreeWidgetItem(type)
@@ -52,14 +53,6 @@ FileTreeWidgetItem::FileTreeWidgetItem(FileTreeWidgetItem *parent, FileTreeWidge
     init();
 }
 
-FileTreeWidgetItem::FileTreeWidgetItem(const FileTreeWidgetItem &other) :
-    QTreeWidgetItem(other)
-{
-    mState         = other.mState;
-    mProjectFolder = other.mProjectFolder;
-    mMyThread      = other.mMyThread;
-}
-
 void FileTreeWidgetItem::init()
 {
     mState=NORMAL;
@@ -71,7 +64,9 @@ FileTreeWidgetItem::~FileTreeWidgetItem()
 {
     if (mMyThread)
     {
-        if (threads.contains(mMyThread))
+        int index=threads.indexOf(mMyThread);
+
+        if (index>=0 && index<THREADS_COUNT)
         {
             mMyThread->wait();
         }
@@ -85,8 +80,6 @@ void FileTreeWidgetItem::createThread()
     mMyThread=new ItemThread(filePath());
     threads.append(mMyThread);
 
-    connect(mMyThread, SIGNAL(finished()), this, SLOT(threadFinished()));
-
     if (threads.length()<THREADS_COUNT)
     {
         mMyThread->start(QThread::IdlePriority);
@@ -97,12 +90,12 @@ void FileTreeWidgetItem::threadFinished()
 {
     threads.removeOne(mMyThread);
 
-    if (threads.length()>=THREADS_COUNT)
+    if (threads.length()>THREADS_COUNT)
     {
         threads.at(THREADS_COUNT)->start(QThread::IdlePriority);
     }
 
-    if (mMyThread->mOk)
+    if (mMyThread->isOk())
     {
         setState(VERIFIED_GOOD);
     }
@@ -148,20 +141,4 @@ void FileTreeWidgetItem::setState(const State &aState)
 void FileTreeWidgetItem::setProjectFolder(const QString &aProjectFolder)
 {
     mProjectFolder=aProjectFolder;
-}
-
-// =======================================================================
-//                                ItemThread
-// =======================================================================
-
-ItemThread::ItemThread(const QString &aFileName, QObject *parent) :
-    QThread(parent)
-{
-    mFileName=aFileName;
-    mOk=false;
-}
-
-void ItemThread::run()
-{
-
 }
