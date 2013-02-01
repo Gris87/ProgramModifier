@@ -8,6 +8,8 @@
 #include <QTreeWidgetItem>
 #include <QTextBlockFormat>
 
+#include "filetreewidgetitem.h"
+
 namespace Ui {
 class MainWindow;
 }
@@ -32,9 +34,9 @@ private:
     void deleteFile();
     void deleteFile(QString aFileName);
     void toggleRows();
-    void insertTreeNodes(QTreeWidgetItem *aParentItem, QString aFolder);
+    void insertTreeNodes(FileTreeWidgetItem *aParentItem, QString aFolder);
     void updateProjectFolder();
-    QString itemPath(QTreeWidgetItem *aItem);
+    QString itemPath(FileTreeWidgetItem *aItem);
     void openFile();
 
     inline void saveState();
@@ -46,7 +48,7 @@ protected:
 private slots:
     void on_actionOpen_folder_triggered();
     void on_actionExit_triggered();
-    void on_filesTreeWidget_currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous);
+    void on_filesTreeWidget_currentItemChanged(QTreeWidgetItem *aCurrent, QTreeWidgetItem *aPrevious);
 };
 
 #endif // MAINWINDOW_H

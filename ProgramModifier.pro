@@ -26,13 +26,17 @@ CONFIG (debug, debug|release) {
     RCC_DIR = release/gen
 }
 
+
+
 SOURCES +=  \
             src/main.cpp \
             src/main/mainwindow.cpp \
-            src/main/treedirectorydialog.cpp
+            src/main/treedirectorydialog.cpp \
+            src/main/filetreewidgetitem.cpp
 
 HEADERS  += src/main/mainwindow.h \
-            src/main/treedirectorydialog.h
+            src/main/treedirectorydialog.h \
+            src/main/filetreewidgetitem.h
 
 FORMS    += src/main/mainwindow.ui \
             src/main/treedirectorydialog.ui

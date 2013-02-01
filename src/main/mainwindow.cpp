@@ -45,7 +45,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     ui->filesTreeWidget->blockSignals(true);
 
-    QTreeWidgetItem *aItem=new QTreeWidgetItem(QStringList() << "/");
+    FileTreeWidgetItem *aItem=new FileTreeWidgetItem(QStringList() << "/");
+    aItem->setProjectFolder(mProjectFolder);
     aItem->setIcon(0, mIconProvider.icon(QFileIconProvider::Folder));
     ui->filesTreeWidget->addTopLevelItem(aItem);
 
@@ -82,11 +83,11 @@ bool MainWindow::eventFilter(QObject *aObject, QEvent *aEvent)
 
 void MainWindow::deleteFile()
 {
-    QTreeWidgetItem *aItem=ui->filesTreeWidget->currentItem();
+    FileTreeWidgetItem *aItem=(FileTreeWidgetItem *)ui->filesTreeWidget->currentItem();
 
     if (aItem)
     {
-        QString aFileName=itemPath(aItem);
+        QString aFileName=aItem->filePath();
 
         if (QMessageBox::question(this, tr("Delete file"), tr("Do you want to delete file:\n%1").arg(aFileName), QMessageBox::Yes | QMessageBox::Default, QMessageBox::No | QMessageBox::Escape)==QMessageBox::Yes)
         {
@@ -208,7 +209,7 @@ void MainWindow::toggleRows()
     aFile.close();
 }
 
-void MainWindow::insertTreeNodes(QTreeWidgetItem *aParentItem, QString aFolder)
+void MainWindow::insertTreeNodes(FileTreeWidgetItem *aParentItem, QString aFolder)
 {
     while (aParentItem->childCount()>0)
     {
@@ -228,7 +229,8 @@ void MainWindow::insertTreeNodes(QTreeWidgetItem *aParentItem, QString aFolder)
 
         if (aFiles.at(i).isDir())
         {
-            QTreeWidgetItem *aItem=new QTreeWidgetItem(QStringList() << aFileName);
+            FileTreeWidgetItem *aItem=new FileTreeWidgetItem(QStringList() << aFileName);
+            aItem->setProjectFolder(mProjectFolder);
             aItem->setIcon(0, mIconProvider.icon(QFileIconProvider::Folder));
             aParentItem->addChild(aItem);
 
@@ -236,9 +238,12 @@ void MainWindow::insertTreeNodes(QTreeWidgetItem *aParentItem, QString aFolder)
         }
         else
         {
-            QTreeWidgetItem *aItem=new QTreeWidgetItem(QStringList() << aFileName);
+            FileTreeWidgetItem *aItem=new FileTreeWidgetItem(QStringList() << aFileName);
+            aItem->setProjectFolder(mProjectFolder);
             aItem->setIcon(0, mIconProvider.icon(QFileIconProvider::File));
             aParentItem->addChild(aItem);
+
+            aItem->createThread();
         }
     }
 }
@@ -251,40 +256,12 @@ void MainWindow::updateProjectFolder()
 
         ui->filesTreeWidget->setUpdatesEnabled(false);
 
-        QTreeWidgetItem *aItem=ui->filesTreeWidget->topLevelItem(0);
+        FileTreeWidgetItem *aItem=(FileTreeWidgetItem *)ui->filesTreeWidget->topLevelItem(0);
         insertTreeNodes(aItem, QDir::fromNativeSeparators(mProjectFolder));
         aItem->setExpanded(true);
 
         ui->filesTreeWidget->setUpdatesEnabled(true);
     }
-}
-
-QString MainWindow::itemPath(QTreeWidgetItem *aItem)
-{
-    if (aItem==0)
-    {
-        return "";
-    }
-
-    QString aFileName=QDir::fromNativeSeparators(aItem->text(0));
-
-    while (aItem->parent())
-    {
-        aItem=aItem->parent();
-        aFileName.insert(0, "/");
-        aFileName.insert(0, aItem->text(0));
-    }
-
-    aFileName=QDir::fromNativeSeparators(mProjectFolder)+aFileName;
-
-    while (aFileName.contains("//"))
-    {
-        aFileName.replace("//", "/");
-    }
-
-    aFileName=QDir::toNativeSeparators(aFileName);
-
-    return aFileName;
 }
 
 void MainWindow::openFile()
@@ -348,7 +325,7 @@ void MainWindow::on_actionExit_triggered()
 
 bool firstRun=true;
 
-void MainWindow::on_filesTreeWidget_currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem * /*previous*/)
+void MainWindow::on_filesTreeWidget_currentItemChanged(QTreeWidgetItem *aCurrent, QTreeWidgetItem * /*aPrevious*/)
 {
     if (firstRun)
     {
@@ -356,7 +333,19 @@ void MainWindow::on_filesTreeWidget_currentItemChanged(QTreeWidgetItem *current,
         return;
     }
 
-    mCurrentFile=itemPath(current);
+    if (aCurrent==0)
+    {
+        return;
+    }
+
+    QString aFileName=((FileTreeWidgetItem *)aCurrent)->filePath();
+
+    if (QFileInfo(aFileName).isDir())
+    {
+        return;
+    }
+
+    mCurrentFile=aFileName;
     openFile();
 }
 
