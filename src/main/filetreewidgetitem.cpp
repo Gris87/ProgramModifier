@@ -3,7 +3,7 @@
 #include <QDir>
 #include <QPainter>
 
-#define THREADS_COUNT 4
+#define THREADS_COUNT 8
 QList<ItemThread *> threads;
 
 FileTreeWidgetItem::FileTreeWidgetItem(int type) :
@@ -70,6 +70,7 @@ FileTreeWidgetItem::~FileTreeWidgetItem()
         if (index>=0 && index<THREADS_COUNT)
         {
             mMyThread->wait();
+            threads.removeAt(index);
         }
 
         delete mMyThread;
